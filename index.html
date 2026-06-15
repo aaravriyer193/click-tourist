@@ -164,7 +164,6 @@
     background: #111;
     aspect-ratio: 3/4;
     width: 100%;
-    max-width: 380px;
     margin-bottom: 18px;
     border: 1px solid var(--line2);
   }
@@ -190,7 +189,6 @@
     grid-template-columns: 1fr 1fr;
     gap: 8px;
     width: 100%;
-    max-width: 380px;
     margin-bottom: 18px;
   }
   .gallery-item {
@@ -228,6 +226,7 @@
     border-radius: 50px;
     margin-bottom: 18px;
     align-self: flex-start;
+    max-width: 100%;
   }
   .status .dot {
     width: 7px; height: 7px; border-radius: 50%;
@@ -245,7 +244,13 @@
   }
 
   /* ── Screens ─────────────────────────────────────────── */
-  .screen { display: none; flex-direction: column; align-items: center; width: 100%; }
+  .screen {
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    max-width: 380px;
+  }
   .screen.active { display: flex; }
 
   /* ── Helpers ─────────────────────────────────────────── */
@@ -254,7 +259,7 @@
   .footnote {
     font-size: 0.8rem; color: var(--faint);
     text-align: left; margin-top: 24px;
-    width: 100%; max-width: 380px;
+    width: 100%;
   }
   .mt8 { margin-top: 8px; }
   .mb16 { margin-bottom: 16px; }
