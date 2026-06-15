@@ -470,7 +470,7 @@
 <body>
 
 <div id="flash"></div>
-<div id="toast">📸 New photo received! <img id="toast-thumb" src="" alt=""></div>
+<div id="toast"><span id="toast-text">New photo received</span> <img id="toast-thumb" src="" alt=""></div>
 
 <!-- ════════ PREVIEW MODAL ════════ -->
 <div id="preview-modal">
@@ -650,9 +650,7 @@ function startSession() {
       setStatus($('wait-status'), 'Connected — get ready!', 'connected');
     });
     conn.on('data', onPhotoData);
-    conn.on('close', () => {
-      if (role === 'owner') setStatus($('owner-live-status'), 'Photographer left', 'waiting');
-    });
+    conn.on('close', photographerLeft);
   });
 
   // Stranger calls us with their live camera → show viewfinder
@@ -664,6 +662,7 @@ function startSession() {
       show('screen-owner-live');
       setStatus($('owner-live-status'), 'Live — smile!', 'connected');
     });
+    call.on('close', photographerLeft);
   });
 
   peer.on('error', err => {
@@ -786,8 +785,11 @@ function addToGallery(src) {
   $('gallery').prepend(item);
 }
 
-function showToast(src) {
-  $('toast-thumb').src = src;
+function showToast(src, text) {
+  $('toast-text').textContent = text || 'New photo received';
+  const thumb = $('toast-thumb');
+  if (src) { thumb.src = src; thumb.style.display = ''; }
+  else { thumb.removeAttribute('src'); thumb.style.display = 'none'; }
   const t = $('toast');
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3000);
@@ -835,6 +837,20 @@ function shareLink() {
 }
 
 // ── Cleanup ────────────────────────────────────────────
+// ── Photographer left → auto-end the owner's session ───
+let leftHandled = false;
+function photographerLeft() {
+  if (role !== 'owner' || leftHandled) return;
+  leftHandled = true;
+  // freeze the last frame & let the owner know before resetting
+  $('remote-video').srcObject = null;
+  if ($('screen-owner-live').classList.contains('active')) {
+    setStatus($('owner-live-status'), 'Photographer left — wrapping up', 'waiting');
+  }
+  showToast(null, 'Photographer left — session ended');
+  setTimeout(() => { leftHandled = false; goHome(); }, 1800);
+}
+
 function endSession() { cleanup(); show('screen-home'); }
 function cleanup() {
   try { if (conn) conn.close(); } catch(_) {}
@@ -853,6 +869,7 @@ function cleanup() {
   if (ls) { ls.style.backgroundImage = ''; ls.classList.remove('has-shot'); }
   const sb = $('shutter-btn');
   if (sb) sb.disabled = true;
+  leftHandled = false;
 }
 
 // ── Entry point: detect ?code= → photographer ──────────
