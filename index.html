@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Click — Tourist Photo Handoff</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --ink:      #0f0d0b;
+    --warm:     #b8621a;
+    --gold:     #d4a843;
+    --sky:      #edeae3;
+    --paper:    #f2ede4;
+    --mist:     #7a746c;
+    --success:  #2d6e45;
+    --rule:     #c8bfaf;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Layout shells ─────────────────────────────────── */
+  #app {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 20px 40px;
+  }
+
+  .wordmark {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 2.4rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-top: 3px solid var(--ink);
+    border-bottom: 1px solid var(--ink);
+    padding: 6px 0 4px;
+    width: 100%;
+    max-width: 400px;
+    justify-content: center;
+  }
+  .wordmark .shutter {
+    width: 26px; height: 26px;
+    background: var(--ink);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .wordmark .shutter svg { width: 13px; height: 13px; fill: var(--paper); }
+
+  .tagline {
+    font-size: 0.7rem;
+    color: var(--mist);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    text-align: center;
+    border-bottom: 1px solid var(--rule);
+    width: 100%;
+    max-width: 400px;
+    padding-bottom: 20px;
+    padding-top: 5px;
+  }
+
+  /* ── Cards ──────────────────────────────────────────── */
+  .card {
+    background: transparent;
+    border: none;
+    border-top: 2px solid var(--ink);
+    padding: 20px 0 0;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+  }
+
+  .card h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+  .card p {
+    font-size: 0.83rem;
+    color: var(--mist);
+    line-height: 1.6;
+    margin-bottom: 22px;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 18px;
+  }
+
+  /* ── Buttons ────────────────────────────────────────── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border: none; cursor: pointer; border-radius: 2px; font-family: inherit;
+    font-weight: 500; transition: transform .15s, opacity .15s;
+    -webkit-tap-highlight-color: transparent;
+    letter-spacing: 0.04em;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-primary {
+    background: var(--ink); color: var(--paper);
+    padding: 14px 28px; font-size: 0.9rem;
+    width: 100%;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 500;
+  }
+  .btn-primary:hover { opacity: .85; }
+  .btn-ghost {
+    background: transparent; color: var(--ink);
+    padding: 11px 16px; font-size: 0.82rem;
+    border: 1.5px solid var(--ink);
+    margin-top: 10px;
+    width: 100%;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .btn-ghost:hover { background: var(--ink); color: var(--paper); }
+  .btn-success {
+    background: var(--success); color: #fff;
+    padding: 14px 28px; font-size: 0.9rem;
+    width: 100%;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── QR block ────────────────────────────────────────── */
+  #qr-wrap {
+    background: var(--sky);
+    border: 1.5px solid var(--ink);
+    padding: 20px;
+    margin-bottom: 16px;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 220px;
+  }
+  #qr-wrap canvas { display: block; }
+
+  .link-pill {
+    background: var(--sky);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--ink);
+    padding: 9px 12px;
+    font-size: 0.72rem;
+    font-family: 'Courier New', monospace;
+    color: var(--mist);
+    word-break: break-all;
+    margin-bottom: 14px;
+    cursor: pointer;
+    transition: background .15s;
+    text-align: left;
+    user-select: all;
+  }
+  .link-pill:hover { background: #e5e0d6; }
+
+  /* ── Viewfinder ─────────────────────────────────────── */
+  #viewfinder-wrap {
+    position: relative;
+    border-radius: 0;
+    overflow: hidden;
+    background: #0a0a0a;
+    aspect-ratio: 3/4;
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 20px;
+    border: 2px solid var(--ink);
+  }
+  /* Photographer screen: viewfinder connects flush to shutter row */
+  #screen-photographer #viewfinder-wrap {
+    margin-bottom: 0;
+    border-bottom: none;
+  }
+  #shutter-row {
+    width: 100%;
+    max-width: 400px;
+    background: #111;
+    border: 2px solid var(--ink);
+    border-top: 1px solid #333;
+    display: flex; align-items: center; justify-content: center;
+    padding: 18px 0 22px;
+    margin-bottom: 14px;
+  }
+  #remote-video, #local-video {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .vf-overlay {
+    position: absolute; inset: 0;
+    border: 2px solid rgba(240,192,96,.6);
+    border-radius: 14px;
+    pointer-events: none;
+  }
+  .vf-corner {
+    position: absolute; width: 22px; height: 22px;
+    border-color: var(--gold); border-style: solid;
+  }
+  .vf-corner.tl { top: 12px; left: 12px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+  .vf-corner.tr { top: 12px; right: 12px; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+  .vf-corner.bl { bottom: 12px; left: 12px; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+  .vf-corner.br { bottom: 12px; right: 12px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+
+  /* Shutter button — sits in its own row below the viewfinder */
+  #shutter-btn {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: #fff;
+    border: 5px solid rgba(255,255,255,.35);
+    cursor: pointer;
+    box-shadow: 0 0 0 3px rgba(255,255,255,.15), 0 4px 24px rgba(0,0,0,.5);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .12s, background .12s;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+  }
+  #shutter-btn:active { transform: scale(.88); background: var(--gold); }
+  #shutter-btn:disabled { opacity: .35; cursor: not-allowed; }
+  #shutter-btn.sent { background: var(--success); }
+  #shutter-btn.sent .inner { background: var(--success); border-color: var(--success); }
+  #shutter-btn .inner { width: 52px; height: 52px; border-radius: 50%; background: #fff; border: 2px solid #ddd; transition: background .2s, border-color .2s; }
+
+  /* ── Gallery ─────────────────────────────────────── */
+  #gallery {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 16px;
+  }
+  .gallery-item {
+    border-radius: 0;
+    overflow: hidden;
+    aspect-ratio: 3/4;
+    background: #ccc;
+    position: relative;
+    cursor: pointer;
+    border: 1px solid var(--rule);
+  }
+  .gallery-item img {
+    width: 100%; height: 100%; object-fit: cover;
+    transition: opacity .2s;
+  }
+  .gallery-item:hover img { opacity: .88; }
+  .dl-btn {
+    position: absolute; bottom: 0; right: 0;
+    background: var(--ink); color: var(--paper);
+    border: none; padding: 5px 8px;
+    font-size: 0.7rem; cursor: pointer; font-family: inherit;
+    transition: opacity .15s;
+    border-radius: 0;
+    letter-spacing: 0.06em;
+  }
+  .dl-btn:hover { opacity: .8; }
+
+  /* ── Status pill ─────────────────────────────────────── */
+  .status {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.72rem; color: var(--mist);
+    padding: 5px 10px;
+    background: var(--sky);
+    border: 1px solid var(--rule);
+    margin-bottom: 16px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .status .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--mist);
+    animation: pulse 1.8s infinite;
+    flex-shrink: 0;
+  }
+  .status.connected .dot { background: var(--success); animation: none; }
+  .status.waiting .dot { background: var(--warm); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .3; }
+  }
+
+  /* ── Screens ─────────────────────────────────────────── */
+  .screen { display: none; flex-direction: column; align-items: center; width: 100%; }
+  .screen.active { display: flex; }
+
+  /* ── Helpers ─────────────────────────────────────────── */
+  .divider { height: 1px; background: var(--rule); margin: 20px 0; width: 100%; }
+  .small { font-size: 0.78rem; color: var(--mist); }
+  .footnote {
+    font-size: 0.68rem; color: var(--mist); letter-spacing: 0.08em;
+    text-transform: uppercase; text-align: center; margin-top: 22px;
+    width: 100%; max-width: 400px;
+  }
+  .mt8 { margin-top: 8px; }
+  .mb16 { margin-bottom: 16px; }
+
+  /* ── Fullscreen photo preview ─────────────────────────── */
+  #preview-modal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.92); z-index: 100;
+    align-items: center; justify-content: center; flex-direction: column;
+    padding: 24px;
+  }
+  #preview-modal.open { display: flex; }
+  #preview-modal img {
+    max-width: 100%; max-height: 80dvh;
+    border-radius: 12px;
+    box-shadow: 0 8px 40px rgba(0,0,0,.5);
+  }
+  #preview-modal .close-btn {
+    position: absolute; top: 20px; right: 20px;
+    background: rgba(255,255,255,.12); border: none; color: #fff;
+    width: 38px; height: 38px; border-radius: 50%; font-size: 1.2rem;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #preview-modal .close-btn:hover { background: rgba(255,255,255,.22); }
+  #preview-modal .dl-full {
+    margin-top: 16px;
+    background: var(--warm); color: #fff; border: none; border-radius: 30px;
+    padding: 12px 28px; font-family: inherit; font-size: 0.9rem; font-weight: 500;
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 4px 16px rgba(200,135,58,.4);
+  }
+
+  /* ── Flash animation ─────────────────────────────────── */
+  #flash {
+    position: fixed; inset: 0; background: #fff;
+    pointer-events: none; opacity: 0; z-index: 200;
+    transition: opacity 0s;
+  }
+  #flash.go { opacity: 1; transition: opacity 0s; }
+  #flash.fade { opacity: 0; transition: opacity 0.5s ease-out; }
+
+  /* ── Incoming toast ──────────────────────────────────── */
+  #toast {
+    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(140px);
+    background: var(--ink); color: #fff;
+    padding: 12px 22px; font-size: 0.85rem;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.3);
+    transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+    white-space: nowrap; z-index: 150;
+    opacity: 0; pointer-events: none;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  #toast img { width: 38px; height: 38px; object-fit: cover; }
+
+  /* ── Responsive ──────────────────────────────────────── */
+  @media (max-width: 380px) {
+    .card { padding: 24px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="flash"></div>
+<div id="toast">📸 New photo received! <img id="toast-thumb" src="" alt=""></div>
+
+<!-- ════════ PREVIEW MODAL ════════ -->
+<div id="preview-modal">
+  <button class="close-btn" onclick="closePreview()">✕</button>
+  <img id="preview-img" src="" alt="Photo preview">
+  <button class="dl-full" onclick="downloadPreview()">⬇ Save to phone</button>
+</div>
+
+<!-- ════════ MAIN APP ════════ -->
+<div id="app">
+
+  <!-- Header -->
+  <div class="wordmark">
+    <div class="shutter">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.5-10H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7.5a2 2 0 0 0-2-2z"/>
+      </svg>
+    </div>
+    Click
+  </div>
+  <p class="tagline">Tourist photo · no handoff</p>
+
+  <!-- ── SCREEN 1: Home ── -->
+  <div id="screen-home" class="screen active">
+    <div class="card">
+      <h2>Ready for your photo?</h2>
+      <p>Generate a code for a stranger to scan with their phone camera. They frame the shot — it lands straight on your phone. You never hand anything over.</p>
+      <button class="btn btn-primary" onclick="startSession()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="19" y="19" width="2" height="2"/></svg>
+        Create my photo code
+      </button>
+    </div>
+
+    <p class="footnote">No app · No sign-up · Photo never saves to their phone</p>
+  </div>
+
+  <!-- ── SCREEN 2: Owner — waiting for stranger ── -->
+  <div id="screen-owner-waiting" class="screen">
+    <div class="status waiting" id="wait-status"><span class="dot"></span> Waiting for someone to scan…</div>
+    <div class="card">
+      <h2>Hand this to a stranger</h2>
+      <p>Ask them to open their <b>phone camera</b> and point it at this code. It opens a viewfinder on their phone — no app needed.</p>
+      <div id="qr-wrap">
+        <canvas id="qr-canvas"></canvas>
+      </div>
+      <div class="link-pill" id="share-link" title="Tap to copy" onclick="copyLink()">generating…</div>
+      <div style="display:flex;gap:6px;width:100%;">
+        <button class="btn btn-ghost" style="margin-top:0;flex:1;" onclick="shareLink()">⇪ Share link</button>
+        <button class="btn btn-ghost" style="margin-top:0;flex:1;" onclick="goHome()">← Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SCREEN 3: Owner — connected, receiving ── -->
+  <div id="screen-owner-live" class="screen">
+    <div class="status connected" id="owner-live-status"><span class="dot"></span> Live — smile!</div>
+    <div id="viewfinder-wrap">
+      <video id="remote-video" autoplay playsinline muted></video>
+      <div class="vf-overlay">
+        <div class="vf-corner tl"></div><div class="vf-corner tr"></div>
+        <div class="vf-corner bl"></div><div class="vf-corner br"></div>
+      </div>
+    </div>
+    <p class="footnote" style="margin-top:0;margin-bottom:14px;">Their shots arrive here ↓</p>
+    <div id="gallery"></div>
+    <button class="btn btn-ghost" onclick="endSession()">✕ End session</button>
+  </div>
+
+  <!-- ── SCREEN 4: Photographer view ── -->
+  <div id="screen-photographer" class="screen">
+    <div class="status waiting" id="photo-status"><span class="dot"></span> Connecting…</div>
+    <div id="viewfinder-wrap" style="max-width:400px;width:100%">
+      <video id="local-video" autoplay playsinline muted></video>
+      <div class="vf-overlay">
+        <div class="vf-corner tl"></div><div class="vf-corner tr"></div>
+        <div class="vf-corner bl"></div><div class="vf-corner br"></div>
+      </div>
+    </div>
+    <div id="shutter-row">
+      <button id="shutter-btn" onclick="takePhoto()" disabled><div class="inner"></div></button>
+    </div>
+    <p class="small">Tap to take the shot. It goes straight to their phone — nothing is saved to yours.</p>
+  </div>
+
+</div><!-- #app -->
+
+<!-- Libraries: QR generation + PeerJS signalling -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   CLICK — Tourist Photo Handoff
+   Signalling : PeerJS free cloud  (peerjs.com)
+   Transport  : WebRTC DataChannel — photo flows phone↔phone,
+                never stored on a server, never on their roll.
+   Deploy URL : click-tourist.vercel.app
+═══════════════════════════════════════════════════════ */
+
+// The public URL the QR should encode. Falls back to current
+// origin when opened locally so the demo still works.
+const DEPLOY_URL = 'https://click-tourist.vercel.app';
+
+// ── State ──────────────────────────────────────────────
+let peer = null;            // PeerJS instance
+let conn = null;            // DataChannel connection (photos)
+let mediaConn = null;       // Media call (live viewfinder)
+let localStream = null;     // photographer's camera
+let role = null;            // 'owner' | 'photographer'
+let myCode = null;          // peer id / session code
+let receivedPhotos = [];
+let currentPreviewSrc = null;
+
+// ── Helpers ────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const show = id => {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+};
+const setStatus = (el, txt, cls) => {
+  el.className = 'status ' + (cls || '');
+  el.innerHTML = '<span class="dot"></span> ' + txt;
+};
+
+function goHome() { cleanup(); show('screen-home'); }
+
+// ─────────────────────────────────────────────────────────
+//  OWNER  — creates a code, shows QR, waits for stranger
+// ─────────────────────────────────────────────────────────
+function startSession() {
+  role = 'owner';
+  myCode = 'click-' + Math.random().toString(36).slice(2, 8);
+  show('screen-owner-waiting');
+  setStatus($('wait-status'), 'Starting…', 'waiting');
+
+  // Build the link a stranger lands on
+  const base = location.protocol === 'file:' ? DEPLOY_URL : location.origin + location.pathname;
+  const shareUrl = `${base}?code=${myCode}`;
+  $('share-link').textContent = shareUrl;
+  $('share-link').dataset.url = shareUrl;
+
+  // QR
+  $('qr-wrap').innerHTML = '<canvas id="qr-canvas"></canvas>';
+  new QRious({
+    element: $('qr-canvas'), value: shareUrl, size: 220,
+    foreground: '#0f0d0b', background: '#edeae3', level: 'M'
+  });
+
+  // PeerJS — register our code with the free cloud broker
+  peer = new Peer(myCode, { debug: 1 });
+
+  peer.on('open', () => {
+    setStatus($('wait-status'), 'Waiting for someone to scan…', 'waiting');
+  });
+
+  // Stranger opened a data connection → they're here
+  peer.on('connection', c => {
+    conn = c;
+    conn.on('open', () => {
+      setStatus($('wait-status'), 'Connected — get ready!', 'connected');
+    });
+    conn.on('data', onPhotoData);
+    conn.on('close', () => {
+      if (role === 'owner') setStatus($('owner-live-status'), 'Photographer left', 'waiting');
+    });
+  });
+
+  // Stranger calls us with their live camera → show viewfinder
+  peer.on('call', call => {
+    mediaConn = call;
+    call.answer(); // owner sends nothing back
+    call.on('stream', remoteStream => {
+      $('remote-video').srcObject = remoteStream;
+      show('screen-owner-live');
+      setStatus($('owner-live-status'), 'Live — smile!', 'connected');
+    });
+  });
+
+  peer.on('error', err => {
+    console.error(err);
+    if (err.type === 'unavailable-id') {
+      // Rare collision — try again with a fresh code
+      myCode = 'click-' + Math.random().toString(36).slice(2, 8);
+      peer.destroy();
+      startSession();
+    } else {
+      setStatus($('wait-status'), 'Connection error — tap Cancel & retry', 'waiting');
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────
+//  PHOTOGRAPHER — opened the scanned link, joins the code
+// ─────────────────────────────────────────────────────────
+async function joinAsPhotographer(code) {
+  role = 'photographer';
+  myCode = code;
+  show('screen-photographer');
+  setStatus($('photo-status'), 'Asking for camera…', 'waiting');
+
+  // 1. Camera
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false
+    });
+    $('local-video').srcObject = localStream;
+  } catch (err) {
+    setStatus($('photo-status'), 'Camera blocked — allow it & reload', 'waiting');
+    return;
+  }
+
+  // 2. PeerJS — random id, then connect to the owner's code
+  setStatus($('photo-status'), 'Connecting…', 'waiting');
+  peer = new Peer({ debug: 1 });
+
+  peer.on('open', () => {
+    // Data channel for sending the photo
+    conn = peer.connect(code, { reliable: true });
+    conn.on('open', () => {
+      setStatus($('photo-status'), 'Ready — frame the shot!', 'connected');
+      $('shutter-btn').disabled = false;
+    });
+    conn.on('close', () => setStatus($('photo-status'), 'Owner disconnected', 'waiting'));
+
+    // Live viewfinder call so the owner sees what we see
+    mediaConn = peer.call(code, localStream);
+  });
+
+  peer.on('error', err => {
+    console.error(err);
+    if (err.type === 'peer-unavailable') {
+      setStatus($('photo-status'), 'Code expired — ask for a new one', 'waiting');
+    } else {
+      setStatus($('photo-status'), 'Connection error', 'waiting');
+    }
+  });
+}
+
+// ── Take photo (photographer) ──────────────────────────
+function takePhoto() {
+  if (!localStream || !conn || conn.open !== true) return;
+  const v = $('local-video');
+  const canvas = document.createElement('canvas');
+  canvas.width = v.videoWidth || 1280;
+  canvas.height = v.videoHeight || 720;
+  canvas.getContext('2d').drawImage(v, 0, 0, canvas.width, canvas.height);
+  doFlash();
+
+  canvas.toBlob(blob => {
+    blob.arrayBuffer().then(buf => {
+      // PeerJS handles chunking of large ArrayBuffers internally
+      conn.send({ type: 'photo', data: buf });
+      // tiny confirmation pulse
+      const btn = $('shutter-btn');
+      btn.classList.add('sent');
+      setTimeout(() => btn.classList.remove('sent'), 400);
+    });
+  }, 'image/jpeg', 0.92);
+}
+
+// ── Receive photo (owner) ──────────────────────────────
+function onPhotoData(payload) {
+  if (payload && payload.type === 'photo') {
+    const blob = new Blob([payload.data], { type: 'image/jpeg' });
+    const url = URL.createObjectURL(blob);
+    addToGallery(url);
+    showToast(url);
+    doFlash();
+  }
+}
+
+function addToGallery(src) {
+  receivedPhotos.push(src);
+  const item = document.createElement('div');
+  item.className = 'gallery-item';
+  item.innerHTML = `
+    <img src="${src}" onclick="openPreview('${src}')" alt="Photo ${receivedPhotos.length}">
+    <button class="dl-btn" onclick="downloadPhoto('${src}','click_${receivedPhotos.length}.jpg')">SAVE</button>`;
+  $('gallery').prepend(item);
+}
+
+function showToast(src) {
+  $('toast-thumb').src = src;
+  const t = $('toast');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── Preview modal ──────────────────────────────────────
+function openPreview(src) {
+  currentPreviewSrc = src;
+  $('preview-img').src = src;
+  $('preview-modal').classList.add('open');
+}
+function closePreview() { $('preview-modal').classList.remove('open'); }
+function downloadPreview() { if (currentPreviewSrc) downloadPhoto(currentPreviewSrc, 'click_photo.jpg'); }
+function downloadPhoto(src, name) {
+  const a = document.createElement('a');
+  a.href = src; a.download = name; a.click();
+}
+
+// ── Flash ──────────────────────────────────────────────
+function doFlash() {
+  const f = $('flash');
+  f.classList.remove('go', 'fade');
+  void f.offsetWidth;
+  f.classList.add('go');
+  setTimeout(() => { f.classList.remove('go'); f.classList.add('fade'); }, 80);
+}
+
+// ── Share / copy ───────────────────────────────────────
+function copyLink() {
+  const link = $('share-link').dataset.url || $('share-link').textContent;
+  navigator.clipboard.writeText(link).then(() => {
+    const el = $('share-link');
+    const orig = el.textContent;
+    el.textContent = '✓ Copied to clipboard';
+    setTimeout(() => el.textContent = orig, 1600);
+  });
+}
+function shareLink() {
+  const link = $('share-link').dataset.url || $('share-link').textContent;
+  if (navigator.share) {
+    navigator.share({ title: 'Take my photo with Click', url: link }).catch(()=>{});
+  } else {
+    copyLink();
+  }
+}
+
+// ── Cleanup ────────────────────────────────────────────
+function endSession() { cleanup(); show('screen-home'); }
+function cleanup() {
+  try { if (conn) conn.close(); } catch(_) {}
+  try { if (mediaConn) mediaConn.close(); } catch(_) {}
+  try { if (peer) peer.destroy(); } catch(_) {}
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  peer = conn = mediaConn = null; role = null; myCode = null;
+  $('remote-video').srcObject = null;
+  $('local-video').srcObject = null;
+  $('gallery').innerHTML = '';
+  receivedPhotos = [];
+}
+
+// ── Entry point: detect ?code= → photographer ──────────
+function boot() {
+  const code = new URLSearchParams(location.search).get('code');
+  if (code) {
+    joinAsPhotographer(code);
+  }
+}
+window.addEventListener('DOMContentLoaded', boot);
+</script>
+</body>
+</html>
